@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Quantone.ai</title>
+  <link rel="icon" href="No Background Logo and Name.png" type="image/png" />
+  <!-- Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Sora:wght@600;700&display=swap" rel="stylesheet">
+  <style>
+    :root{
+      --brand:#043FA8;   /* primary */
+      --ink:#2C3034;     /* dark neutral */
+      --accent:#7C94D3;  /* light brand accent */
+      --accent2:#7CACBC; /* cyan accent */
+      --bg:#FBFBFA;      /* neutral background */
+      --white:#FEFEFE;
+      --muted:#EEEEEE;
+      --glow: 0 0 22px rgba(4,63,168,.45), 0 0 48px rgba(124,148,211,.25);
+    }
+
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0;
+      color:var(--ink);
+      background: radial-gradient(1200px 1200px at 50% 30%, #FBF7EC 0%, #FBFBFA 40%, #FEFEFE 100%);
+      overflow:hidden;
+      font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,"Helvetica Neue",Arial,sans-serif;
+      text-rendering:optimizeLegibility;
+      -webkit-font-smoothing:antialiased;
+    }
+
+    /* Fullscreen canvas for depth particles */
+    #bg{
+      position:fixed; inset:0;
+      display:block; width:100%; height:100%;
+      z-index:-2;
+      background:transparent;
+    }
+
+    /* Decorative rings */
+    .rings{
+      position:fixed; inset:0; pointer-events:none; z-index:-1;
+      background:
+        radial-gradient(600px 600px at 50% 40%, rgba(4,63,168,.12) 0 2px, transparent 3px) 0 0/220px 220px,
+        radial-gradient(600px 600px at 50% 40%, rgba(124,148,211,.10) 0 1px, transparent 2px) 110px 110px/220px 220px;
+      mask: radial-gradient(1000px 700px at 50% 45%, #000 0%, transparent 80%);
+      opacity:.65;
+      animation: drift 18s linear infinite;
+    }
+    @keyframes drift{ to{ background-position: 220px 0, 330px 110px; } }
+
+    /* 3D stage */
+    .stage{
+      position:relative;
+      height:100svh; /* better on mobile chrome */
+      height:100dvh; /* fallback on desktop that supports dvh */
+      display:flex; align-items:center; justify-content:center;
+      perspective: 1200px;
+      text-align:center;
+      padding: clamp(16px,6vw,40px);
+    }
+
+    .stack{
+      transform-style:preserve-3d;
+      transition: transform .15s ease-out;
+      max-width:min(1000px,92vw);
+      margin-inline:auto;
+    }
+
+    .logo{
+      width: clamp(150px, 18vw, 240px);
+      margin-inline:auto;
+      display:block;
+      filter: drop-shadow(0 10px 18px rgba(4,63,168,.25));
+      animation: float 6s ease-in-out infinite;
+      transform: translateZ(40px);
+    }
+    @keyframes float { 0%,100%{ transform: translateZ(40px) translateY(0) } 50%{ transform: translateZ(40px) translateY(-10px) } }
+
+    h1{
+      font-family:Sora,Inter,sans-serif;
+      font-weight:700;
+      font-size: clamp(30px, 5vw, 54px);
+      color:var(--brand);
+      letter-spacing:.06em;
+      text-transform:uppercase;
+      margin: clamp(18px,2.8vw,26px) 0 10px;
+      transform: translateZ(55px);
+      text-shadow: var(--glow);
+    }
+
+    .lead{
+      font-size: clamp(16px,1.5vw,20px);
+      line-height:1.7;
+      color:var(--ink);
+      max-width: 62ch;
+      margin: 0 auto clamp(28px,4vw,42px);
+      opacity:.95;
+      transform: translateZ(30px);
+      padding-inline: 4px;
+    }
+
+    .ctas{ display:flex; justify-content:center; gap:14px; flex-wrap:wrap; transform: translateZ(70px); }
+
+    .btn{
+      display:inline-flex; align-items:center; justify-content:center;
+      padding: 14px 28px;
+      border-radius: 14px;
+      font-weight: 600;
+      font-size: 16px;
+      text-decoration:none;
+      cursor:pointer;
+      transition: transform .2s ease, box-shadow .2s ease, background .2s ease, color .2s ease, border-color .2s ease;
+      will-change: transform;
+      user-select:none;
+      backface-visibility:hidden;
+    }
+    .btn.primary{
+      background:var(--brand); color:var(--white);
+      box-shadow: 0 8px 22px rgba(4,63,168,.28), 0 2px 0 rgba(4,63,168,.4) inset;
+    }
+    .btn.primary:hover{ transform: translateZ(10px) translateY(-2px); box-shadow: 0 14px 30px rgba(4,63,168,.33); }
+
+    .email-inline{
+      margin-top:16px; font-size:14px; transform: translateZ(25px);
+      color:var(--brand);
+    }
+    .email-inline a{ color:inherit; text-decoration:none; border-bottom:1px solid currentColor }
+    .email-inline a:hover{ opacity:.9 }
+
+    footer{
+      position:fixed; left:0; right:0;
+      bottom: calc(14px + env(safe-area-inset-bottom, 0px));
+      text-align:center; font-size:13px; color:#6b7683;
+      pointer-events:none;
+    }
+
+    /* Optional grain for subtle depth (very light) */
+    .grain{
+      position:fixed; inset:-50%;
+      background-image: radial-gradient(rgba(0,0,0,.06) 1px, transparent 1px);
+      background-size: 2px 2px; opacity:.12; mix-blend-mode:multiply; pointer-events:none; z-index:-1;
+      animation: noise 1.6s steps(2) infinite;
+    }
+    @keyframes noise{ to{ transform: translate3d(-2%,1%,0) } }
+
+    /* Touch devices: larger tap targets, lower visual intensity */
+    @media (pointer:coarse){
+      .rings,.grain{opacity:.35}
+      .btn{padding:16px 28px; font-size:17px}
+    }
+
+    /* Respect reduced motion */
+    @media (prefers-reduced-motion: reduce){
+      .logo, .rings, .grain { animation: none !important; }
+      .stack{ transition:none }
+    }
+  </style>
+</head>
+<body>
+  <canvas id="bg" aria-hidden="true"></canvas>
+  <div class="rings" aria-hidden="true"></div>
+  <div class="grain" aria-hidden="true"></div>
+
+  <main class="stage" id="stage">
+    <section class="stack" id="stack">
+      <img src="Background Logo and Name.png" alt="Quantone logo" class="logo" />
+      <h1>Welcome to Quantone</h1>
+      <p class="lead">Ascend to the quantum real through immersive 3D sounds, crafted for deeper connection and experience.</p>
+
+      <div class="ctas">
+        <a class="btn primary" href="mailto:info@quantone.ai">Contact Us</a>
+      </div>
+    </section>
+  </main>
+
+  <footer>© 2025 Quantone.ai — All rights reserved.</footer>
+
+  <script>
+    // --- Helpers ---
+    const isCoarse = matchMedia('(pointer: coarse)').matches;
+
+    // ---- 3D parallax tilt (desktop only) ----
+    (function(){
+      if(isCoarse) return; // disable tilt on touch devices
+      const stage = document.getElementById('stage');
+      const stack = document.getElementById('stack');
+      const bounds = () => stage.getBoundingClientRect();
+      let rx = 0, ry = 0, tx = 0, ty = 0;
+      const damp = 0.08; // smoothing
+
+      function onMove(e){
+        const b = bounds();
+        const cx = b.left + b.width/2;
+        const cy = b.top + b.height/2;
+        const x = (e.clientX - cx) / (b.width/2);  // -1..1
+        const y = (e.clientY - cy) / (b.height/2); // -1..1
+        rx = y * 8;    // rotateX
+        ry = -x * 10;  // rotateY
+        tx = -x * 12;  // translateX
+        ty = -y * 8;   // translateY
+      }
+      function tick(){
+        _rx += (rx - _rx) * damp;
+        _ry += (ry - _ry) * damp;
+        _tx += (tx - _tx) * damp;
+        _ty += (ty - _ty) * damp;
+        stack.style.transform =
+          `translate3d(${_tx}px, ${_ty}px, 0) rotateX(${_rx}deg) rotateY(${_ry}deg)`;
+        requestAnimationFrame(tick);
+      }
+      let _rx=0,_ry=0,_tx=0,_ty=0;
+      stage.addEventListener('pointermove', onMove, {passive:true});
+      stage.addEventListener('pointerleave', ()=>{ rx=ry=tx=ty=0; });
+      tick();
+    })();
+
+    // ---- Depth particle field (canvas) with parallax ----
+    (function(){
+      const canvas = document.getElementById('bg');
+      const ctx = canvas.getContext('2d', { alpha:true });
+
+      // Cap DPR for perf; fewer particles on touch
+      let DPR = Math.min(window.devicePixelRatio || 1, isCoarse ? 1.5 : 2);
+      const BASE = isCoarse ? 70 : 140;
+      const PALETTE = ['#043FA8','rgba(124,148,211,0.9)','rgba(124,172,188,0.9)'];
+      const parts = [];
+      let w,h,N=BASE;
+      let mx=0,my=0;
+
+      function resize(){
+        w = canvas.width  = Math.floor(innerWidth * DPR);
+        h = canvas.height = Math.floor(innerHeight * DPR);
+        canvas.style.width  = innerWidth + 'px';
+        canvas.style.height = innerHeight + 'px';
+      }
+      function rnd(a,b){ return a + Math.random()*(b-a) }
+      function init(){
+        parts.length = 0;
+        for(let i=0;i<N;i++){
+          const z = Math.random(); // 0..1 depth
+          parts.push({
+            x:rnd(0,w), y:rnd(0,h), z,
+            s:rnd(0.6, 2.0)*(0.6+1.2*z),
+            vx:rnd(-0.06,0.06)*(0.3+z),
+            vy:rnd(-0.06,0.06)*(0.3+z),
+            hue:PALETTE[i%PALETTE.length]
+          });
+        }
+      }
+
+      if(!isCoarse){
+        addEventListener('pointermove', e=>{
+          mx = (e.clientX/innerWidth)*2-1;
+          my = (e.clientY/innerHeight)*2-1;
+        }, {passive:true});
+      }
+
+      function step(){
+        ctx.clearRect(0,0,w,h);
+        for(const p of parts){
+          const parX = mx * (1 - p.z) * (isCoarse?10:18) * DPR;
+          const parY = my * (1 - p.z) * (isCoarse?7:12) * DPR;
+
+          p.x += p.vx * DPR;
+          p.y += p.vy * DPR;
+
+          // wrap
+          if(p.x < -50) p.x = w+50; if(p.x > w+50) p.x = -50;
+          if(p.y < -50) p.y = h+50; if(p.y > h+50) p.y = -50;
+
+          // soft dot
+          ctx.beginPath();
+          ctx.fillStyle = p.hue;
+          ctx.globalAlpha = 0.35 + 0.45*p.z;
+          ctx.arc(p.x+parX, p.y+parY, p.s*DPR, 0, Math.PI*2);
+          ctx.fill();
+
+          // faint streak for motion depth (desktop stronger)
+          if(!isCoarse){
+            ctx.globalAlpha = 0.12 + 0.18*p.z;
+            ctx.beginPath();
+            ctx.moveTo(p.x + parX, p.y + parY);
+            ctx.lineTo(p.x + parX + p.vx*220, p.y + parY + p.vy*220);
+            ctx.lineWidth = 1 * DPR;
+            ctx.strokeStyle = p.hue;
+            ctx.stroke();
+          }
+        }
+        requestAnimationFrame(step);
+      }
+
+      addEventListener('resize', ()=>{ resize(); init(); });
+      resize(); init(); step();
+    })();
+  </script>
+</body>
+</html>
